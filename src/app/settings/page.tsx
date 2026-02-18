@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Server, Plug, PlugZap, RotateCcw, Check } from "lucide-react";
+import {
+  Server,
+  Plug,
+  PlugZap,
+  RotateCcw,
+  Check,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useConnectionStore } from "@/store/connection-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +24,16 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 const statusVariant: Record<string, "active" | "idle" | "error" | "busy"> = {
@@ -32,6 +51,8 @@ export default function SettingsPage() {
   const [port, setPort] = useState(String(config.port));
   const [apiKey, setApiKey] = useState(config.apiKey);
   const [saved, setSaved] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const isDirty =
     host !== config.host ||
@@ -57,6 +78,28 @@ export default function SettingsPage() {
   function handleTestConnection() {
     handleSave();
     connect();
+  }
+
+  async function handleResetToAnthropic() {
+    setResetting(true);
+    setDialogOpen(false);
+    try {
+      const res = await fetch("/api/openclaw/reset-provider", {
+        method: "POST",
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body.error || "Failed to reset provider");
+      } else {
+        toast.success("Reset to Anthropic and restarted gateway");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Network error — is the server running?"
+      );
+    } finally {
+      setResetting(false);
+    }
   }
 
   return (
@@ -243,6 +286,98 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Danger zone */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>
+            Destructive actions that modify your OpenClaw configuration and
+            restart the gateway.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <div className="flex items-center justify-between rounded-lg border border-destructive/30 p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Reset Provider to Anthropic</p>
+              <p className="text-xs text-muted-foreground">
+                Removes the Ollama provider, sets Anthropic as active, changes
+                the default model to{" "}
+                <code className="text-xs">claude-sonnet-4-5</code>, and
+                restarts the gateway.
+              </p>
+            </div>
+
+            <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={resetting}
+                  className="ml-4 shrink-0"
+                >
+                  {resetting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting…
+                    </>
+                  ) : (
+                    "Reset Provider to Anthropic"
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will overwrite your{" "}
+                    <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded">
+                      ~/.openclaw/openclaw.json
+                    </code>{" "}
+                    configuration:
+                    <ul className="mt-3 list-disc pl-5 space-y-1 text-left">
+                      <li>
+                        Delete the <strong>ollama:default</strong> provider
+                        profile
+                      </li>
+                      <li>
+                        Set <strong>anthropic:default</strong> as the active
+                        provider
+                      </li>
+                      <li>
+                        Change the default model to{" "}
+                        <strong>anthropic/claude-sonnet-4-5</strong>
+                      </li>
+                      <li>
+                        Kill all OpenClaw processes and restart the gateway
+                      </li>
+                    </ul>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel asChild>
+                    <Button variant="outline" size="sm">
+                      Cancel
+                    </Button>
+                  </AlertDialogCancel>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleResetToAnthropic}
+                  >
+                    Yes, reset to Anthropic
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
