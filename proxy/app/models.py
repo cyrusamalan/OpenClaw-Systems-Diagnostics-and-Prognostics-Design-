@@ -109,6 +109,12 @@ class MetricsSummary(BaseModel):
     memoryFiles: int = 0
 
 
+class CreateAgentRequest(BaseModel):
+    name: str
+    workspace: Optional[str] = None
+    model: Optional[str] = None
+
+
 class LogEntry(BaseModel):
     raw: str = ""
     data: Optional[dict] = None

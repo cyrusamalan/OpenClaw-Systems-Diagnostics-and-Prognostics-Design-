@@ -130,5 +130,45 @@ def build_log_stream_cmd() -> list[str]:
         return parts
 
 
+async def create_agent(name: str, workspace: str | None = None, model: str | None = None) -> dict:
+    """Run `openclaw agents add <name>` with optional flags. Returns CLI output."""
+    args = ["agents", "add", name]
+    if workspace:
+        args += ["--workspace", workspace]
+    if model:
+        args += ["--model", model]
+
+    token_flag = f" --token {OPENCLAW_TOKEN}" if OPENCLAW_TOKEN else ""
+    oc_args = " ".join(args) + token_flag
+
+    if IS_WINDOWS:
+        cmd = ["wsl", "--", "bash", "-lc", f"{OPENCLAW_CMD} {oc_args}"]
+    else:
+        parts = [OPENCLAW_CMD] + args
+        if OPENCLAW_TOKEN:
+            parts += ["--token", OPENCLAW_TOKEN]
+        cmd = parts
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+
+    out = stdout.decode().strip()
+    err = stderr.decode().strip()
+
+    if proc.returncode != 0:
+        raise RuntimeError(err or out or f"exit code {proc.returncode}")
+
+    clear_cache()
+
+    try:
+        return json.loads(out)
+    except json.JSONDecodeError:
+        return {"raw": out}
+
+
 def clear_cache():
     _cache.clear()

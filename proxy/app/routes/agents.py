@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app import openclaw_bridge as oc
-from app.models import OpenClawAgent
+from app.models import OpenClawAgent, CreateAgentRequest
 
 router = APIRouter(tags=["agents"])
 
@@ -54,3 +54,16 @@ async def get_agent(agent_id: str):
             return OpenClawAgent(**_enrich_agent(a, status_data))
 
     raise HTTPException(status_code=404, detail="Agent not found")
+
+
+@router.post("/agents")
+async def create_agent(body: CreateAgentRequest):
+    try:
+        result = await oc.create_agent(
+            name=body.name,
+            workspace=body.workspace or None,
+            model=body.model or None,
+        )
+        return {"ok": True, "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
