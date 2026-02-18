@@ -5,14 +5,17 @@ import { useDashboardStore } from "@/store/agent-store";
 import { useOverview } from "@/hooks/use-agents";
 import { AgentTree } from "@/components/agents/agent-tree";
 import { SessionPanel } from "@/components/agents/session-panel";
+import { AgentMap } from "@/components/agents/agent-map";
 import { DetailPanel } from "@/components/agents/detail-panel";
 import { AddAgentDialog } from "@/components/agents/add-agent-dialog";
-import { Bot, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bot, Loader2, Map, List } from "lucide-react";
 
 export default function AgentsPage() {
   const overview = useDashboardStore((s) => s.overview);
   const { refetch } = useOverview(5000);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [view, setView] = useState<"tree" | "map">("tree");
 
   const handleAgentCreated = useCallback(() => {
     setTimeout(() => refetch(), 1500);
@@ -42,25 +45,52 @@ export default function AgentsPage() {
             {overview.sessions.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <AddAgentDialog onCreated={handleAgentCreated} />
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border overflow-hidden">
+            <Button
+              variant={view === "tree" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none px-3"
+              onClick={() => setView("tree")}
+            >
+              <List className="h-4 w-4 mr-1.5" />
+              Tree
+            </Button>
+            <Button
+              variant={view === "map" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none px-3"
+              onClick={() => setView("map")}
+            >
+              <Map className="h-4 w-4 mr-1.5" />
+              Map
+            </Button>
+          </div>
+          <AddAgentDialog onCreated={handleAgentCreated} />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start"
-        style={{ minHeight: "calc(100vh - 220px)" }}
-      >
-        <AgentTree
-          agents={overview.agents}
-          sessions={overview.sessions}
-          selectedAgentId={selectedAgentId}
-          onSelectAgent={setSelectedAgentId}
-        />
+      {view === "tree" ? (
+        <div
+          className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start"
+          style={{ minHeight: "calc(100vh - 220px)" }}
+        >
+          <AgentTree
+            agents={overview.agents}
+            sessions={overview.sessions}
+            selectedAgentId={selectedAgentId}
+            onSelectAgent={setSelectedAgentId}
+          />
 
-        <SessionPanel
-          sessions={overview.sessions}
-          agents={overview.agents}
-          selectedAgentId={selectedAgentId}
-        />
-      </div>
+          <SessionPanel
+            sessions={overview.sessions}
+            agents={overview.agents}
+            selectedAgentId={selectedAgentId}
+          />
+        </div>
+      ) : (
+        <AgentMap agents={overview.agents} sessions={overview.sessions} />
+      )}
 
       <DetailPanel overview={overview} />
     </div>
