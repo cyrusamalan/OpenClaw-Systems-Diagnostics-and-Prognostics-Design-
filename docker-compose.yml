@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  # ── Mission Control Dashboard (Next.js) ─────────────────────
+  dashboard:
+    build: .
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    environment:
+      - NEXT_PUBLIC_OPENCLAW_HOST=proxy
+      - NEXT_PUBLIC_OPENCLAW_PORT=8080
+      - NEXT_PUBLIC_OPENCLAW_API_KEY=${OPENCLAW_API_KEY:-}
+      - PROXY_INTERNAL_URL=http://proxy:8080
+    depends_on:
+      proxy:
+        condition: service_started
+    networks:
+      - openclaw-net
+
+  # ── Proxy Service (FastAPI) ─────────────────────────────────
+  # Sits between the dashboard and OpenClaw, exposing a uniform
+  # REST API for agents, tasks, logs, and metrics.
+  proxy:
+    build: ./proxy
+    ports:
+      - "${PROXY_PORT:-8080}:8080"
+    environment:
+      - OPENCLAW_INTERNAL_URL=http://openclaw:${OPENCLAW_PORT:-9090}
+      - API_KEY=${OPENCLAW_API_KEY:-}
+      - SIMULATE=${SIMULATE:-true}
+      - CORS_ORIGINS=http://localhost:3000,http://dashboard:3000
+    depends_on:
+      - openclaw
+    networks:
+      - openclaw-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── OpenClaw Instance ───────────────────────────────────────
+  # Replace with the real OpenClaw image/build when available.
+  # The proxy will forward requests to OPENCLAW_INTERNAL_URL.
+  openclaw:
+    image: openclaw:latest
+    ports:
+      - "${OPENCLAW_PORT:-9090}:9090"
+    networks:
+      - openclaw-net
+
+networks:
+  openclaw-net:
+    driver: bridge

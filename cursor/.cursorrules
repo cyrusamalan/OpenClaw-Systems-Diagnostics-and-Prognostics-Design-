@@ -1,0 +1,105 @@
+Build a Mission Control Dashboard for OpenClaw — a full-stack web application that provides a 
+centralized interface to monitor, manage, and interact with all AI models and agents running 
+inside a Dockerized OpenClaw instance.
+
+---
+
+## STACK
+- Frontend: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui
+- Backend: Next.js API routes (or a lightweight Express server if needed)
+- Real-time: WebSockets or Server-Sent Events for live status updates
+- State: Zustand or React Query for data fetching and caching
+- Charts/Viz: Recharts or D3 for metrics
+- Docker: Expose a REST API or WebSocket endpoint from OpenClaw's Docker container 
+  that this dashboard can connect to remotely via configurable host/port
+
+---
+
+## CORE FEATURES
+
+### 1. Agent & Model Registry
+- Display all registered agents and sub-agents in a visual hierarchy (tree or node graph)
+- Each agent card shows:
+  - Name, type (LLM, tool-use, retrieval, orchestrator, etc.)
+  - Status: Active / Idle / Error / Busy
+  - Skills/capabilities tags (e.g., "code generation", "web search", "data analysis")
+  - Current task (if assigned)
+  - Model backing it (e.g., GPT-4o, Claude 3.5, Llama 3)
+  - Token usage and latency metrics
+- Sub-agents are nested visually under their parent orchestrator agent
+- Clicking an agent opens a detailed side panel with full config and logs
+
+### 2. Task Assignment Interface
+- A "Dispatch Task" panel where the user can:
+  - Write a task description in natural language
+  - See AI-suggested agent matches based on skill tags
+  - Manually select an agent or agent group from a dropdown/search
+  - Set priority: Low / Normal / High / Critical
+  - Optionally attach context files or structured data
+  - Submit and track the task in real time
+- Task queue view showing all pending, in-progress, and completed tasks
+
+### 3. Remote Docker Connection
+- A settings/config panel where the user can input:
+  - OpenClaw Docker host IP and port
+  - Auth token or API key
+  - Connection type: REST / WebSocket
+- Connection status indicator (green/red) in the navbar
+- Auto-reconnect logic with exponential backoff
+- If running locally, default to localhost with the standard OpenClaw port
+
+### 4. Live Monitoring & Metrics
+- Real-time dashboard panel showing:
+  - Total agents online vs offline
+  - Active tasks count
+  - Token usage over time (line chart)
+  - Average response latency per agent (bar chart)
+  - Error rate across all agents
+- A live log stream panel with filtering by agent, severity, and time range
+
+### 5. Agent Detail View
+- Full-page or slide-over panel for each agent containing:
+  - System prompt / persona summary
+  - Tool integrations (search, code executor, browser, etc.)
+  - Conversation history or task history
+  - Edit skill tags
+  - Enable / Disable toggle
+  - Restart / force-stop controls
+
+### 6. Notifications & Alerts
+- Toast notifications for task completions, failures, and agent errors
+- Alert rules: user can define thresholds (e.g., latency > 5s → alert)
+- Notification history panel
+
+### 7. UI/UX Design Direction
+- Dark mode by default, with a toggle for light mode
+- Space/mission-control aesthetic: subtle grid backgrounds, glowing status 
+  indicators, monospace fonts for logs
+- Fully responsive (desktop-first, but mobile-accessible)
+- Smooth animations via Framer Motion for panel transitions and status changes
+
+---
+
+## ARCHITECTURE NOTES
+- Abstract the OpenClaw API calls into a /lib/openclaw-client.ts service layer 
+  so the transport (REST vs WebSocket) can be swapped without touching UI code
+- Use environment variables for OPENCLAW_HOST, OPENCLAW_PORT, OPENCLAW_API_KEY
+- If OpenClaw does not natively expose an API, scaffold a lightweight proxy 
+  service (Node or Python FastAPI) that sits in the same Docker network and 
+  exposes the required endpoints
+- Structure the project cleanly:
+  /app           → Next.js pages and layouts
+  /components    → Reusable UI components
+  /lib           → API clients, helpers, types
+  /hooks         → Custom React hooks
+  /store         → Zustand stores
+  /types         → Shared TypeScript interfaces
+
+---
+
+## DELIVERABLES
+1. Fully working Next.js app with all features above scaffolded
+2. A docker-compose.yml that runs both the dashboard and a proxy service 
+   (if needed) alongside OpenClaw
+3. A .env.example with all required environment variables documented
+4. A README.md with setup instructions for connecting to a remote Docker instance

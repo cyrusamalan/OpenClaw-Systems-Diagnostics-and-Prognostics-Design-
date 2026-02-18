@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenClaw Mission Control Dashboard
 
-## Getting Started
+A systems diagnostics and prognostics dashboard for [OpenClaw](https://docs.openclaw.ai) — providing real-time monitoring, health assessment, and management of AI agents, sessions, channels, and gateway infrastructure.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui
+- **Backend Proxy**: FastAPI (Python) bridging the dashboard to OpenClaw's CLI
+- **State**: Zustand for client-side state management
+- **Animations**: Framer Motion
+- **UI**: Dark-mode-first mission-control aesthetic
+
+## Architecture
+
+```
+Browser → Next.js Dashboard (:3000) → /api/proxy/* → FastAPI Proxy (:8080) → OpenClaw CLI → Gateway (:18789)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The proxy calls `openclaw` CLI commands with `--json` flags and transforms the output into a uniform REST API that the dashboard consumes.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
 
-## Learn More
+- Node.js 20+
+- Python 3.12+
+- OpenClaw installed and gateway running (`openclaw gateway status`)
 
-To learn more about Next.js, take a look at the following resources:
+### Install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm install
+pip install -r proxy/requirements.txt
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Configure
 
-## Deploy on Vercel
+```bash
+cp .env.example .env
+# Edit .env and set OPENCLAW_TOKEN to your gateway token
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Run
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Terminal 1 — proxy
+cd proxy
+OPENCLAW_TOKEN=<your-token> uvicorn app.main:app --host 127.0.0.1 --port 8080
+
+# Terminal 2 — dashboard
+npm run dev
+```
+
+Open http://localhost:3000
+
+### Windows (WSL)
+
+If OpenClaw runs in WSL and the dashboard runs on Windows, the proxy auto-detects this and calls `wsl -- bash -lc "openclaw ..."` to bridge across.
+
+```powershell
+# Terminal 1 — proxy (PowerShell)
+$env:OPENCLAW_TOKEN="<your-token>"
+cd proxy
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8080
+
+# Terminal 2 — dashboard (PowerShell)
+npm run dev
+```
+
+## Dashboard Pages
+
+| Route | Description |
+|-------|-------------|
+| `/` | Mission Control overview — gateway, agents, sessions, channels, security |
+| `/agents` | Agent registry with session details |
+| `/tasks` | Sessions and channels view |
+| `/metrics` | System metrics, memory status, security audit |
+| `/settings` | Connection configuration |
+
+## Proxy API
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/overview` | Full system state (gateway + agents + sessions + channels + security) |
+| `GET /api/agents` | List agents |
+| `GET /api/sessions` | List sessions |
+| `GET /api/channels` | Channel health |
+| `GET /api/metrics` | Aggregated metrics |
+| `GET /api/logs` | Recent log entries |
+| `GET /api/logs/stream` | SSE real-time log stream |
+| `GET /api/health` | Proxy + gateway health check |
+
+## Environment Variables
+
+See [`.env.example`](.env.example) for all available options.
+
+| Variable | Description |
+|----------|-------------|
+| `OPENCLAW_TOKEN` | Gateway authentication token |
+| `OPENCLAW_CMD` | Path to openclaw binary (default: `openclaw`) |
+| `PROXY_PORT` | Proxy listen port (default: `8080`) |
+| `DASHBOARD_PORT` | Dashboard port (default: `3000`) |
