@@ -21,7 +21,7 @@ interface MapEntity {
   label: string;
   emoji: string;
   model: string;
-  tier: "main" | "agent-sub" | "spawned-sub";
+  tier: "main" | "agent" | "spawned-sub";
   working: boolean;
   parentName: string | null;
   onClick: () => void;
@@ -44,9 +44,9 @@ function buildEntities(
       label: agent.identityName || agent.id,
       emoji: agent.identityEmoji || "🤖",
       model: agent.model,
-      tier: agent.isDefault ? "main" : "agent-sub",
+      tier: agent.isDefault ? "main" : "agent",
       working,
-      parentName: agent.isDefault ? null : (agentNameMap.get(agents.find(a => a.isDefault)?.id || "") || "main"),
+      parentName: null,
       onClick: () => openAgentDetail(agent.id),
     });
   }
@@ -80,15 +80,15 @@ const tierConfig = {
     labelText: "text-[11px]",
     maxLabel: 100,
   },
-  "agent-sub": {
-    box: "h-14 w-14 rounded-xl",
-    emoji: "text-xl",
-    labelText: "text-[9px]",
-    maxLabel: 80,
+  agent: {
+    box: "h-20 w-20 rounded-2xl",
+    emoji: "text-3xl",
+    labelText: "text-[11px]",
+    maxLabel: 100,
   },
   "spawned-sub": {
-    box: "h-10 w-10 rounded-lg",
-    emoji: "text-sm",
+    box: "h-11 w-11 rounded-lg",
+    emoji: "text-base",
     labelText: "text-[8px]",
     maxLabel: 60,
   },
@@ -104,7 +104,6 @@ function RobotAvatar({
   total: number;
 }) {
   const cfg = tierConfig[entity.tier];
-  const isSub = entity.tier !== "main";
   const isSpawned = entity.tier === "spawned-sub";
 
   const cols = Math.min(total, 4);
@@ -159,16 +158,9 @@ function RobotAvatar({
           </span>
         )}
 
-        {isSub && (
-          <span
-            className={cn(
-              "absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-background border border-border font-mono font-bold",
-              isSpawned
-                ? "h-3 w-3 text-[6px]"
-                : "h-4 w-4 text-[7px]"
-            )}
-          >
-            {isSpawned ? "s" : "sub"}
+        {isSpawned && (
+          <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border border-border font-mono font-bold text-[6px]">
+            sub
           </span>
         )}
       </div>
@@ -189,9 +181,9 @@ function RobotAvatar({
         >
           {entity.model.split("/").pop()}
         </span>
-        {entity.tier === "agent-sub" && (
-          <Badge variant="outline" className="text-[7px] h-3 px-1 mt-0.5">
-            sub-agent
+        {entity.tier !== "spawned-sub" && !entity.parentName && entity.tier === "main" && (
+          <Badge variant="outline" className="text-[7px] h-3 px-1 mt-0.5 border-primary/30 text-primary">
+            default
           </Badge>
         )}
         {entity.tier === "spawned-sub" && entity.parentName && (

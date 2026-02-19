@@ -166,8 +166,9 @@ export function AgentTree({
   selectedAgentId,
   onSelectAgent,
 }: AgentTreeProps) {
-  const mainAgents = agents.filter((a) => a.isDefault);
-  const subAgents = agents.filter((a) => !a.isDefault);
+  const defaultFirst = [...agents].sort((a, b) =>
+    a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+  );
 
   return (
     <Card className="h-full">
@@ -178,37 +179,18 @@ export function AgentTree({
         </h2>
 
         <div className="space-y-1">
-          {mainAgents.map((agent) => (
+          {defaultFirst.map((agent) => (
             <AgentNode
               key={agent.id}
               agent={agent}
               sessions={sessions}
-              isMain={true}
+              isMain={agent.isDefault}
               isSelected={selectedAgentId === agent.id}
               onSelect={() =>
                 onSelectAgent(selectedAgentId === agent.id ? null : agent.id)
               }
             />
           ))}
-
-          {subAgents.length > 0 && (
-            <div className="ml-4 border-l-2 border-primary/20 pl-2 space-y-1 mt-1">
-              {subAgents.map((agent) => (
-                <AgentNode
-                  key={agent.id}
-                  agent={agent}
-                  sessions={sessions}
-                  isMain={false}
-                  isSelected={selectedAgentId === agent.id}
-                  onSelect={() =>
-                    onSelectAgent(
-                      selectedAgentId === agent.id ? null : agent.id
-                    )
-                  }
-                />
-              ))}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
